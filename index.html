@@ -505,6 +505,11 @@ nav.tabs button[aria-current="page"] svg { stroke: var(--accent); }
 .timer .card.fin button { color: var(--accent-ink); border-color: color-mix(in srgb, var(--accent-ink) 35%, transparent); }
 .timer .card.fin .ring .bg, .timer .card.fin .ring .fg { stroke: var(--accent-ink); }
 
+.upd { position: fixed; left: 0; right: 0; top: calc(env(safe-area-inset-top, 0px) + 66px); z-index: 7; pointer-events: none; }
+.upd .card { pointer-events: auto; display: flex; align-items: center; gap: 10px; background: var(--ink); color: var(--bg); border-radius: 16px; padding: 10px 10px 10px 14px; box-shadow: 0 12px 34px rgba(0, 0, 0, .3); }
+.upd .card > span { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 700; line-height: 1.3; }
+.upd .card > span small { display: block; font-weight: 500; opacity: .7; font-size: 12px; }
+.upd .btn.primary { padding: 9px 14px; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--tabs-h) + 92px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 999px; font-size: 13px; font-weight: 700; z-index: 25; max-width: calc(100% - 32px); text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, .3); }
 .toast.gold { background: var(--accent); color: var(--accent-ink); }
 @media (prefers-reduced-motion: no-preference) {
@@ -1184,6 +1189,7 @@ function renderRutina() {
   h += '<div class="small">' + (S.modo === "claude" ? "Tus sesiones se guardan en tu cuenta de Claude: las ves desde cualquier dispositivo y Claude las puede leer para actualizar tu wiki." : "Tus sesiones se guardan solo en este navegador. Exportá cada tanto para no perderlas y para pasárselas a la wiki.") + ' <span class="mono">' + Object.keys(S.sesiones).length + "</span> sesiones guardadas.</div>";
   h += '<div class="row"><button type="button" class="btn primary" data-act="exportar">Exportar JSON</button><button type="button" class="btn" data-act="copiar">Copiar JSON</button><label class="btn" for="importFile">Importar JSON</label><input type="file" id="importFile" accept=".json,application/json" hidden></div>';
   h += '<textarea id="jsonOut" class="in" hidden readonly aria-label="JSON exportado"></textarea>';
+  h += '<div class="row" style="border-top:1px solid var(--line);padding-top:12px"><span class="small muted">Versión <span class="mono">' + esc(VERSION.startsWith("__") ? "local" : VERSION) + "</span></span><span class=\"spacer\"></span>" + (SW_OK ? '<button type="button" class="btn sm" data-act="buscarAct">Buscar actualización</button>' : "") + "</div>";
   h += '<div class="row">';
   if (S.confirmar === "rutinaBase") h += '<span class="confirm">¿Volver a la rutina original? <button type="button" class="btn sm danger solid" data-act="rutinaBaseSi">Sí</button><button type="button" class="btn sm" data-act="cancelar">No</button></span>';
   else h += '<button type="button" class="btn sm danger" data-act="rutinaBase">Restaurar rutina original</button>';
@@ -1312,6 +1318,37 @@ setInterval(() => {
   if (s && s.inicio && s.abierta) el.textContent = duracion(Date.now() - s.inicio);
 }, 15000);
 
+/* ---------- Actualizaciones (versión instalada desde GitHub Pages) ---------- */
+// build.py reemplaza la marca por el hash del sitio. Dentro de Claude o abierto suelto no hay service worker.
+const VERSION = "f51432066c";
+const SW_OK = (() => { try { return !window.claude && window.top === window && "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost") && !VERSION.startsWith("__"); } catch (e) { return false; } })();
+if (SW_OK) {
+  const habia = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register("sw.js").then(reg => {
+    // Cada vez que se vuelve a la app (por ejemplo al llegar al gym), se fija si hay una versión nueva.
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") reg.update().catch(() => {}); });
+  }).catch(() => {});
+  // Cuando entra una versión nueva (no la primera instalación), se avisa y se recarga con un toque.
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (habia) avisarActualizacion(); });
+}
+function avisarActualizacion() {
+  if (document.getElementById("upd")) return;
+  const abierta = Object.values(S.sesiones).some(s => s.abierta);
+  const el = document.createElement("div"); el.id = "upd"; el.className = "upd"; el.setAttribute("role", "status");
+  el.innerHTML = '<div class="wrap"><div class="card"><span>Hay una versión nueva de la app<small>' + (abierta ? "Tu sesión en curso queda guardada." : "Tarda un segundo.") + '</small></span><button type="button" class="btn primary" id="updBtn">Actualizar</button><button type="button" class="btn sm" id="updNo" style="color:inherit;border-color:transparent" aria-label="Más tarde">✕</button></div></div>';
+  document.body.appendChild(el);
+  document.getElementById("updBtn").addEventListener("click", () => location.reload());
+  document.getElementById("updNo").addEventListener("click", () => el.remove());
+}
+async function buscarActualizacion() {
+  let reg = null; try { reg = await navigator.serviceWorker.getRegistration(); } catch (e) { reg = null; }
+  if (!reg) { toast("Sin conexión con el sitio: probá de nuevo con señal."); return; }
+  toast("Buscando…");
+  try { await reg.update(); } catch (e) { toast("Sin señal: no se pudo buscar."); return; }
+  if (reg.installing || reg.waiting) toast("Bajando la versión nueva…");
+  else toast("Ya tenés la última versión");
+}
+
 let wake = null;
 async function pedirPantalla() { try { if ("wakeLock" in navigator && !wake) { wake = await navigator.wakeLock.request("screen"); wake.addEventListener("release", () => { wake = null; }); } } catch (e) { wake = null; } }
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && S.vista === "hoy") pedirPantalla(); });
@@ -1400,6 +1437,7 @@ main.addEventListener("click", ev => {
     case "cancelar": { S.confirmar = null; render(); return; }
     case "toggleHist": { S.abiertoHist = S.abiertoHist === b.dataset.id ? null : b.dataset.id; S.confirmar = null; render(); return; }
     case "editarSes": { const s = S.sesiones[b.dataset.id]; S.fecha = s.fecha; S.dia = s.dia; ir("hoy"); return; }
+    case "buscarAct": buscarActualizacion(); return;
     case "exportar": exportar(); return;
     case "copiar": copiar(); return;
     case "rutinaBase": { S.confirmar = "rutinaBase"; render(); return; }
@@ -1458,5 +1496,4 @@ conectar();
 })();
 </script>
 
-<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
 </html>
