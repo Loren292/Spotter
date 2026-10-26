@@ -569,9 +569,9 @@ function tarjetaEj(e, ei, ses) {
     const ph = sug.sets[si] || sug.sets[sug.sets.length - 1] || {};
     h += '<div class="set' + (x.hecho ? " hecho" : "") + '" data-si="' + si + '">';
     h += '<span class="i">' + (si + 1) + "</span>";
-    h += '<span class="unit" data-u="kg"><input id="kg-' + ei + "-" + si + '" inputmode="decimal" autocomplete="off" aria-label="Kilos serie ' + (si + 1) + '" data-k="kg" value="' + (x.kg != null ? fmt(x.kg) : "") + '" placeholder="' + (ph.kg != null ? fmt(ph.kg) : "kg") + '"></span>';
+    h += '<span class="unit" data-u="kg"><input id="kg-' + ei + "-" + si + '" inputmode="decimal" autocomplete="off" aria-label="Kilos serie ' + (si + 1) + '" data-k="kg" value="' + (x.kg != null ? fmt(x.kg) : "") + '" placeholder="' + (ph.kg != null ? fmt(ph.kg) : "") + '"></span>';
     h += '<span class="x">×</span>';
-    h += '<span class="unit" data-u="reps"><input id="reps-' + ei + "-" + si + '" inputmode="numeric" autocomplete="off" aria-label="Repeticiones serie ' + (si + 1) + '" data-k="reps" value="' + (x.reps != null ? fmt(x.reps) : "") + '" placeholder="' + (ph.reps != null ? fmt(ph.reps) : "reps") + '"></span>';
+    h += '<span class="unit" data-u="reps"><input id="reps-' + ei + "-" + si + '" inputmode="numeric" autocomplete="off" aria-label="Repeticiones serie ' + (si + 1) + '" data-k="reps" value="' + (x.reps != null ? fmt(x.reps) : "") + '" placeholder="' + (ph.reps != null ? fmt(ph.reps) : "") + '"></span>';
     h += '<button type="button" class="check" data-act="check" aria-pressed="' + !!x.hecho + '" aria-label="Serie ' + (si + 1) + ' hecha"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>';
     h += "</div>";
   });
